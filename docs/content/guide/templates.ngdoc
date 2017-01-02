@@ -3,6 +3,8 @@
 @sortOrder 260
 @description
 
+# Templates
+
 In Angular, templates are written with HTML that contains Angular-specific elements and attributes.
 Angular combines the template with information from the model and controller to render the dynamic
 view that a user sees in the browser.
@@ -24,7 +26,7 @@ curly-brace {@link expression expression} bindings:
  <!-- Body tag augmented with ngController directive  -->
  <body ng-controller="MyController">
    <input ng-model="foo" value="bar">
-   <!-- Button tag with ng-click directive, and
+   <!-- Button tag with ngClick directive, and
           string expression 'buttonText'
           wrapped in "{{ }}" markup -->
    <button ng-click="changeFoo()">{{buttonText}}</button>

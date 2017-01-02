@@ -1,19 +1,12 @@
 'use strict';
 
-/* globals getInputCompileHelper: false */
+/* globals generateInputCompilerHelper: false */
 
 describe('validators', function() {
 
-  var helper, $rootScope;
+  var helper = {}, $rootScope;
 
-  beforeEach(function() {
-    helper = getInputCompileHelper(this);
-  });
-
-  afterEach(function() {
-    helper.dealoc();
-  });
-
+  generateInputCompilerHelper(helper);
 
   beforeEach(inject(function(_$rootScope_) {
     $rootScope = _$rootScope_;
@@ -142,8 +135,8 @@ describe('validators', function() {
     it('should not throw an error when scope pattern can\'t be found', function() {
       expect(function() {
         var inputElm = helper.compileInput('<input type="text" ng-model="foo" ng-pattern="fooRegexp" />');
-        $rootScope.$apply("foo = 'bar'");
-      }).not.toThrowMatching(/^\[ngPattern:noregexp\] Expected fooRegexp to be a RegExp but was/);
+        $rootScope.$apply('foo = \'bar\'');
+      }).not.toThrow();
     });
 
 
@@ -154,7 +147,7 @@ describe('validators', function() {
           $rootScope.fooRegexp = {};
           $rootScope.foo = 'bar';
         });
-      }).toThrowMatching(/^\[ngPattern:noregexp\] Expected fooRegexp to be a RegExp but was/);
+      }).toThrowMinErr('ngPattern', 'noregexp', 'Expected fooRegexp to be a RegExp but was');
     });
 
 
@@ -204,6 +197,39 @@ describe('validators', function() {
       expect($rootScope.form.test.$error.pattern).toBe(true);
       expect(inputElm).not.toBeValid();
     });
+
+
+    it('should validate the viewValue and not the modelValue', function() {
+      var inputElm = helper.compileInput('<input type="text" name="test" ng-model="value" pattern="\\d{4}">');
+      var ctrl = inputElm.controller('ngModel');
+
+      ctrl.$parsers.push(function(value) {
+        return (value * 10) + '';
+      });
+
+      helper.changeInputValueTo('1234');
+      expect($rootScope.form.test.$error.pattern).not.toBe(true);
+      expect($rootScope.form.test.$modelValue).toBe('12340');
+      expect(inputElm).toBeValid();
+    });
+
+
+    it('should validate on non-input elements', inject(function($compile) {
+      $rootScope.pattern = '\\d{4}';
+      var elm = $compile('<span ng-model="value" pattern="\\d{4}"></span>')($rootScope);
+      var elmNg = $compile('<span ng-model="value" ng-pattern="pattern"></span>')($rootScope);
+      var ctrl = elm.controller('ngModel');
+      var ctrlNg = elmNg.controller('ngModel');
+
+      expect(ctrl.$error.pattern).not.toBe(true);
+      expect(ctrlNg.$error.pattern).not.toBe(true);
+
+      ctrl.$setViewValue('12');
+      ctrlNg.$setViewValue('12');
+
+      expect(ctrl.$error.pattern).toBe(true);
+      expect(ctrlNg.$error.pattern).toBe(true);
+    }));
   });
 
 
@@ -248,7 +274,7 @@ describe('validators', function() {
     });
 
 
-    it('should validate when the model is initalized as a number', function() {
+    it('should validate when the model is initialized as a number', function() {
       $rootScope.value = 12345;
       var inputElm = helper.compileInput('<input type="text" name="input" ng-model="value" minlength="3" />');
       expect($rootScope.value).toBe(12345);
@@ -259,7 +285,7 @@ describe('validators', function() {
       var inputElm = helper.compileInput('<input type="text" name="input" ng-model="value" minlength="3" />');
 
       var ctrl = inputElm.controller('ngModel');
-      spyOn(ctrl, '$isEmpty').andCallThrough();
+      spyOn(ctrl, '$isEmpty').and.callThrough();
 
       ctrl.$parsers.push(function(value) {
         return value + '678';
@@ -268,6 +294,24 @@ describe('validators', function() {
       helper.changeInputValueTo('12345');
       expect(ctrl.$isEmpty).toHaveBeenCalledWith('12345');
     });
+
+
+    it('should validate on non-input elements', inject(function($compile) {
+      $rootScope.min = 3;
+      var elm = $compile('<span ng-model="value" minlength="{{min}}"></span>')($rootScope);
+      var elmNg = $compile('<span ng-model="value" ng-minlength="min"></span>')($rootScope);
+      var ctrl = elm.controller('ngModel');
+      var ctrlNg = elmNg.controller('ngModel');
+
+      expect(ctrl.$error.minlength).not.toBe(true);
+      expect(ctrlNg.$error.minlength).not.toBe(true);
+
+      ctrl.$setViewValue('12');
+      ctrlNg.$setViewValue('12');
+
+      expect(ctrl.$error.minlength).toBe(true);
+      expect(ctrlNg.$error.minlength).toBe(true);
+    }));
   });
 
 
@@ -307,7 +351,7 @@ describe('validators', function() {
 
 
     it('should accept values of any length when maxlength is non-numeric', function() {
-      var inputElm = helper.compileInput('<input type="text" ng-model="value" ng-maxlength="{{maxlength}}" />');
+      var inputElm = helper.compileInput('<input type="text" ng-model="value" ng-maxlength="maxlength" />');
       helper.changeInputValueTo('aaaaaaaaaa');
 
       $rootScope.$apply('maxlength = "5"');
@@ -418,7 +462,7 @@ describe('validators', function() {
     });
 
 
-    it('should validate when the model is initalized as a number', function() {
+    it('should validate when the model is initialized as a number', function() {
       $rootScope.value = 12345;
       var inputElm = helper.compileInput('<input type="text" name="input" ng-model="value" maxlength="10" />');
       expect($rootScope.value).toBe(12345);
@@ -429,7 +473,7 @@ describe('validators', function() {
       var inputElm = helper.compileInput('<input type="text" name="input" ng-model="value" maxlength="10" />');
 
       var ctrl = inputElm.controller('ngModel');
-      spyOn(ctrl, '$isEmpty').andCallThrough();
+      spyOn(ctrl, '$isEmpty').and.callThrough();
 
       ctrl.$parsers.push(function(value) {
         return value + '678';
@@ -438,6 +482,24 @@ describe('validators', function() {
       helper.changeInputValueTo('12345');
       expect(ctrl.$isEmpty).toHaveBeenCalledWith('12345');
     });
+
+
+    it('should validate on non-input elements', inject(function($compile) {
+      $rootScope.max = 3;
+      var elm = $compile('<span ng-model="value" maxlength="{{max}}"></span>')($rootScope);
+      var elmNg = $compile('<span ng-model="value" ng-maxlength="max"></span>')($rootScope);
+      var ctrl = elm.controller('ngModel');
+      var ctrlNg = elmNg.controller('ngModel');
+
+      expect(ctrl.$error.maxlength).not.toBe(true);
+      expect(ctrlNg.$error.maxlength).not.toBe(true);
+
+      ctrl.$setViewValue('1234');
+      ctrlNg.$setViewValue('1234');
+
+      expect(ctrl.$error.maxlength).toBe(true);
+      expect(ctrlNg.$error.maxlength).toBe(true);
+    }));
   });
 
 
@@ -446,22 +508,22 @@ describe('validators', function() {
     it('should allow bindings via ngRequired', function() {
       var inputElm = helper.compileInput('<input type="text" ng-model="value" ng-required="required" />');
 
-      $rootScope.$apply("required = false");
+      $rootScope.$apply('required = false');
 
       helper.changeInputValueTo('');
       expect(inputElm).toBeValid();
 
 
-      $rootScope.$apply("required = true");
+      $rootScope.$apply('required = true');
       expect(inputElm).toBeInvalid();
 
-      $rootScope.$apply("value = 'some'");
+      $rootScope.$apply('value = \'some\'');
       expect(inputElm).toBeValid();
 
       helper.changeInputValueTo('');
       expect(inputElm).toBeInvalid();
 
-      $rootScope.$apply("required = false");
+      $rootScope.$apply('required = false');
       expect(inputElm).toBeValid();
     });
 
@@ -478,7 +540,7 @@ describe('validators', function() {
     it('should be $invalid but $pristine if not touched', function() {
       var inputElm = helper.compileInput('<input type="text" ng-model="name" name="alias" required />');
 
-      $rootScope.$apply("name = null");
+      $rootScope.$apply('name = null');
 
       expect(inputElm).toBeInvalid();
       expect(inputElm).toBePristine();
@@ -525,18 +587,19 @@ describe('validators', function() {
       $rootScope.$apply();
       expect(inputElm).toBeInvalid();
 
-      $rootScope.$apply("answer = true");
+      $rootScope.$apply('answer = true');
       expect(inputElm).toBeValid();
 
-      $rootScope.$apply("answer = false");
+      $rootScope.$apply('answer = false');
       expect(inputElm).toBeValid();
     });
+
 
     it('should validate emptiness against the viewValue', function() {
       var inputElm = helper.compileInput('<input type="text" name="input" ng-model="value" required />');
 
       var ctrl = inputElm.controller('ngModel');
-      spyOn(ctrl, '$isEmpty').andCallThrough();
+      spyOn(ctrl, '$isEmpty').and.callThrough();
 
       ctrl.$parsers.push(function(value) {
         return value + '678';
@@ -545,5 +608,23 @@ describe('validators', function() {
       helper.changeInputValueTo('12345');
       expect(ctrl.$isEmpty).toHaveBeenCalledWith('12345');
     });
+
+
+    it('should validate on non-input elements', inject(function($compile) {
+      $rootScope.value = '12';
+      var elm = $compile('<span ng-model="value" required></span>')($rootScope);
+      var elmNg = $compile('<span ng-model="value" ng-required="true"></span>')($rootScope);
+      var ctrl = elm.controller('ngModel');
+      var ctrlNg = elmNg.controller('ngModel');
+
+      expect(ctrl.$error.required).not.toBe(true);
+      expect(ctrlNg.$error.required).not.toBe(true);
+
+      ctrl.$setViewValue('');
+      ctrlNg.$setViewValue('');
+
+      expect(ctrl.$error.required).toBe(true);
+      expect(ctrlNg.$error.required).toBe(true);
+    }));
   });
 });

@@ -2,7 +2,7 @@
 @name FAQ
 @description
 
-#FAQ
+# FAQ
 
 ## Questions
 
@@ -77,6 +77,8 @@ AngularJS was designed to be compatible with other security measures like Conten
 (CSP), HTTPS (SSL/TLS) and server-side authentication and authorization that greatly reduce the
 possible attack vectors and we highly recommend their use.
 
+Please read {@link security} for more detailed information about securing Angular apps.
+
 
 ### Can I download the source, build, and host the AngularJS environment locally?
 
@@ -86,9 +88,15 @@ Yes. See instructions in {@link downloading}.
 
 ### What browsers does Angular work with?
 
-We run our extensive test suite against the following browsers: Safari, Chrome, Firefox, Opera 15,
-IE9 and mobile browsers (Android, Chrome Mobile, iOS Safari). See {@link guide/ie Internet
-Explorer Compatibility} for more details on supporting legacy IE browsers.
+We run our extensive test suite against the following browsers: the latest versions of Chrome,
+Firefox, Safari, and Safari for iOs, as well as Internet Explorer versions 9-11. See {@link guide/ie
+Internet Explorer Compatibility} for more details on supporting legacy IE browsers.
+
+If a browser is untested, it doesn't mean it won't work; for example, older Android (2.3.x)
+is supported in the sense that we avoid the dot notation for reserved words as property names,
+but we don't actively test changes against it. You can also expect browsers to work that share
+a large part of their codebase with a browser we test, such as Opera > version 12
+(uses the Blink engine), or the various Firefox derivatives.
 
 
 ### What's Angular's performance like?
@@ -241,7 +249,7 @@ If you want to apply a directive to each inner piece of the repeat, put it on a 
 
 ### `$rootScope` exists, but it can be used for evil
 
-Scopes in Angular form a hierarchy, prototypally inheriting from a root scope at the top of the tree.
+Scopes in Angular form a hierarchy, prototypically inheriting from a root scope at the top of the tree.
 Usually this can be ignored, since most views have a controller, and therefore a scope, of their own.
 
 Occasionally there are pieces of data that you want to make global to the whole app.

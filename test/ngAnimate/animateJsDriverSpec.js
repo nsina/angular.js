@@ -1,8 +1,9 @@
 'use strict';
 
-describe("ngAnimate $$animateJsDriver", function() {
+describe('ngAnimate $$animateJsDriver', function() {
 
   beforeEach(module('ngAnimate'));
+  beforeEach(module('ngAnimateMock'));
 
   it('should register the $$animateJsDriver into the list of drivers found in $animateProvider',
     module(function($animateProvider) {
@@ -34,7 +35,7 @@ describe("ngAnimate $$animateJsDriver", function() {
       });
 
       captureLog.length = 0;
-      element = jqLite('<div></div');
+      element = jqLite('<div></div>');
 
       return function($rootElement, $$animateJsDriver) {
         $rootElement.append(element);
@@ -96,7 +97,7 @@ describe("ngAnimate $$animateJsDriver", function() {
     }));
 
     they('should $prop both animations when $prop() is called on the runner', ['end', 'cancel'], function(method) {
-      inject(function($rootScope, $$rAF) {
+      inject(function($rootScope, $animate) {
         var child1 = jqLite('<div></div>');
         element.append(child1);
         var child2 = jqLite('<div></div>');
@@ -127,15 +128,15 @@ describe("ngAnimate $$animateJsDriver", function() {
         $rootScope.$digest();
 
         runner[method]();
-        $$rAF.flush();
+        $animate.flush();
 
         expect(animationsClosed).toBe(true);
-        expect(status).toBe(method === 'end' ? true : false);
+        expect(status).toBe(method === 'end');
       });
     });
 
     they('should fully $prop when all inner animations are complete', ['end', 'cancel'], function(method) {
-      inject(function($rootScope, $$rAF) {
+      inject(function($rootScope, $animate) {
         var child1 = jqLite('<div></div>');
         element.append(child1);
         var child2 = jqLite('<div></div>');
@@ -163,15 +164,15 @@ describe("ngAnimate $$animateJsDriver", function() {
           status = s;
         });
 
-        $$rAF.flush();
-
         captureLog[0].runner[method]();
         expect(animationsClosed).toBe(false);
 
         captureLog[1].runner[method]();
+        $animate.flush();
+
         expect(animationsClosed).toBe(true);
 
-        expect(status).toBe(method === 'end' ? true : false);
+        expect(status).toBe(method === 'end');
       });
     });
   });
