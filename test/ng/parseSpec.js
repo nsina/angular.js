@@ -2635,25 +2635,6 @@ describe('parser', function() {
           expect(log).toEqual('');
         }));
 
-        it('should work with expensive checks', inject(function($parse, $rootScope, log) {
-          var fn = $parse('::foo', null, true);
-          $rootScope.$watch(fn, function(value, old) { if (value !== old) log(value); });
-
-          $rootScope.$digest();
-          expect($rootScope.$$watchers.length).toBe(1);
-
-          $rootScope.foo = 'bar';
-          $rootScope.$digest();
-          expect($rootScope.$$watchers.length).toBe(0);
-          expect(log).toEqual('bar');
-          log.reset();
-
-          $rootScope.foo = 'man';
-          $rootScope.$digest();
-          expect($rootScope.$$watchers.length).toBe(0);
-          expect(log).toEqual('');
-        }));
-
         it('should have a stable value if at the end of a $digest it has a defined value', inject(function($parse, $rootScope, log) {
           var fn = $parse('::foo');
           $rootScope.$watch(fn, function(value, old) { if (value !== old) log(value); });
@@ -3117,6 +3098,107 @@ describe('parser', function() {
           scope.input = 2;
           scope.$digest();
           expect(objB.value).toBe(scope.input);
+        }));
+
+        it('should watch ES6 object computed property changes', function() {
+          var count = 0;
+          var values = [];
+
+          scope.$watch('{[a]: true}', function(val) {
+            count++;
+            values.push(val);
+          }, true);
+
+          scope.$digest();
+          expect(count).toBe(1);
+          expect(values[0]).toEqual({'undefined': true});
+
+          scope.$digest();
+          expect(count).toBe(1);
+          expect(values[0]).toEqual({'undefined': true});
+
+          scope.a = true;
+          scope.$digest();
+          expect(count).toBe(2);
+          expect(values[1]).toEqual({'true': true});
+
+          scope.a = 'abc';
+          scope.$digest();
+          expect(count).toBe(3);
+          expect(values[2]).toEqual({'abc': true});
+
+          scope.a = undefined;
+          scope.$digest();
+          expect(count).toBe(4);
+          expect(values[3]).toEqual({'undefined': true});
+        });
+
+        it('should support watching literals', inject(function($parse) {
+          var lastVal = NaN;
+          var callCount = 0;
+          var listener = function(val) { callCount++; lastVal = val; };
+
+          scope.$watch('{val: val}', listener);
+
+          scope.$apply('val = 1');
+          expect(callCount).toBe(1);
+          expect(lastVal).toEqual({val: 1});
+
+          scope.$apply('val = []');
+          expect(callCount).toBe(2);
+          expect(lastVal).toEqual({val: []});
+
+          scope.$apply('val = []');
+          expect(callCount).toBe(3);
+          expect(lastVal).toEqual({val: []});
+
+          scope.$apply('val = {}');
+          expect(callCount).toBe(4);
+          expect(lastVal).toEqual({val: {}});
+        }));
+
+        it('should only watch the direct inputs to literals', inject(function($parse) {
+          var lastVal = NaN;
+          var callCount = 0;
+          var listener = function(val) { callCount++; lastVal = val; };
+
+          scope.$watch('{val: val}', listener);
+
+          scope.$apply('val = 1');
+          expect(callCount).toBe(1);
+          expect(lastVal).toEqual({val: 1});
+
+          scope.$apply('val = [2]');
+          expect(callCount).toBe(2);
+          expect(lastVal).toEqual({val: [2]});
+
+          scope.$apply('val.push(3)');
+          expect(callCount).toBe(2);
+
+          scope.$apply('val.length = 0');
+          expect(callCount).toBe(2);
+        }));
+
+        it('should only watch the direct inputs to nested literals', inject(function($parse) {
+          var lastVal = NaN;
+          var callCount = 0;
+          var listener = function(val) { callCount++; lastVal = val; };
+
+          scope.$watch('[{val: [val]}]', listener);
+
+          scope.$apply('val = 1');
+          expect(callCount).toBe(1);
+          expect(lastVal).toEqual([{val: [1]}]);
+
+          scope.$apply('val = [2]');
+          expect(callCount).toBe(2);
+          expect(lastVal).toEqual([{val: [[2]]}]);
+
+          scope.$apply('val.push(3)');
+          expect(callCount).toBe(2);
+
+          scope.$apply('val.length = 0');
+          expect(callCount).toBe(2);
         }));
       });
 

@@ -46,14 +46,13 @@ describe('injector', function() {
   it('should resolve dependency graph and instantiate all services just once', function() {
     var log = [];
 
-//          s1
-//        /  | \
-//       /  s2  \
-//      /  / | \ \
-//     /s3 < s4 > s5
-//    //
-//   s6
-
+    //          s1
+    //        /  | \
+    //       /  s2  \
+    //      /  / | \ \
+    //     /s3 < s4 > s5
+    //    //
+    //   s6
 
     providers('s1', function() { log.push('s1'); return {}; }, {$inject: ['s2', 's5', 's6']});
     providers('s2', function() { log.push('s2'); return {}; }, {$inject: ['s3', 's4', 's5']});
@@ -285,14 +284,6 @@ describe('injector', function() {
           // eslint-disable-next-line no-eval
           expect(annotate(eval('a => b => b'))).toEqual(['a']);
         });
-
-        // Support: Chrome 50-51 only
-        // TODO (gkalpak): Remove when Chrome v52 is released.
-        // it('should be able to inject fat-arrow function', function() {
-        //   inject(($injector) => {
-        //     expect($injector).toBeDefined();
-        //   });
-        // });
       }
 
       if (support.classes) {
@@ -325,19 +316,6 @@ describe('injector', function() {
             expect(instance).toEqual(jasmine.any(Clazz));
           });
         }
-
-        // Support: Chrome 50-51 only
-        // TODO (gkalpak): Remove when Chrome v52 is released.
-        // it('should be able to invoke classes', function() {
-        //   class Test {
-        //     constructor($injector) {
-        //       this.$injector = $injector;
-        //     }
-        //   }
-        //   var instance = injector.invoke(Test, null, null, 'Test');
-
-        //   expect(instance.$injector).toBe(injector);
-        // });
       }
     });
 

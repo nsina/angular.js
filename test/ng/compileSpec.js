@@ -1881,15 +1881,14 @@ describe('$compile', function() {
 
 
         it('should throw an error and clear element content if the template fails to load',
-          inject(function($compile, $exceptionHandler, $httpBackend, $rootScope) {
+          inject(function($compile, $httpBackend, $rootScope) {
             $httpBackend.expect('GET', 'hello.html').respond(404, 'Not Found!');
             element = $compile('<div><b class="hello">content</b></div>')($rootScope);
 
-            $httpBackend.flush();
-
+            expect(function() {
+              $httpBackend.flush();
+            }).toThrowMinErr('$compile', 'tpload', 'Failed to load template: hello.html');
             expect(sortedHtml(element)).toBe('<div><b class="hello"></b></div>');
-            expect($exceptionHandler.errors[0]).toEqualMinErr('$compile', 'tpload',
-                'Failed to load template: hello.html');
           })
         );
 
@@ -1905,13 +1904,13 @@ describe('$compile', function() {
               templateUrl: 'template.html'
             }));
           });
-          inject(function($compile, $exceptionHandler, $httpBackend) {
+          inject(function($compile, $httpBackend) {
             $httpBackend.whenGET('template.html').respond('<p>template.html</p>');
 
-            $compile('<div><div class="sync async"></div></div>');
-            $httpBackend.flush();
-
-            expect($exceptionHandler.errors[0]).toEqualMinErr('$compile', 'multidir',
+            expect(function() {
+              $compile('<div><div class="sync async"></div></div>');
+              $httpBackend.flush();
+            }).toThrowMinErr('$compile', 'multidir',
                 'Multiple directives [async, sync] asking for template on: ' +
                 '<div class="sync async">');
           });
@@ -2122,15 +2121,15 @@ describe('$compile', function() {
               'multiple root elements': '<div></div><div></div>'
             }, function(directiveTemplate) {
 
-              inject(function($compile, $templateCache, $rootScope, $exceptionHandler) {
+              inject(function($compile, $templateCache, $rootScope) {
                 $templateCache.put('template.html', directiveTemplate);
-                $compile('<p template></p>')($rootScope);
-                $rootScope.$digest();
 
-                expect($exceptionHandler.errors.pop()).toEqualMinErr('$compile', 'tplrt',
-                  'Template for directive \'template\' must have exactly one root element. ' +
-                  'template.html'
-                );
+                expect(function() {
+                  $compile('<p template></p>')($rootScope);
+                  $rootScope.$digest();
+                }).toThrowMinErr('$compile', 'tplrt',
+                    'Template for directive \'template\' must have exactly one root element. ' +
+                    'template.html');
               });
           });
 
@@ -2657,13 +2656,13 @@ describe('$compile', function() {
         );
 
         it('should not allow more than one isolate/new scope creation per element regardless of `templateUrl`',
-          inject(function($exceptionHandler, $httpBackend) {
+          inject(function($httpBackend) {
             $httpBackend.expect('GET', 'tiscope.html').respond('<div>Hello, world !</div>');
 
-            compile('<div class="tiscope-a; scope-b"></div>');
-            $httpBackend.flush();
-
-            expect($exceptionHandler.errors[0]).toEqualMinErr('$compile', 'multidir',
+            expect(function() {
+              compile('<div class="tiscope-a; scope-b"></div>');
+              $httpBackend.flush();
+            }).toThrowMinErr('$compile', 'multidir',
                 'Multiple directives [scopeB, tiscopeA] asking for new/isolated scope on: ' +
                 '<div class="tiscope-a; scope-b ng-scope">');
           })
@@ -4306,6 +4305,78 @@ describe('$compile', function() {
           });
 
 
+          it('should trigger `$onChanges` for literal expressions when expression input value changes (simple value)', function() {
+            var log = [];
+            function TestController() { }
+            TestController.prototype.$onChanges = function(change) { log.push(change); };
+
+            angular.module('my', [])
+              .component('c1', {
+                controller: TestController,
+                bindings: { 'prop1': '<' }
+              });
+
+            module('my');
+            inject(function($compile, $rootScope) {
+              element = $compile('<c1 prop1="[val]"></c1>')($rootScope);
+
+              $rootScope.$apply('val = 1');
+              expect(log.pop()).toEqual({prop1: jasmine.objectContaining({previousValue: [undefined], currentValue: [1]})});
+
+              $rootScope.$apply('val = 2');
+              expect(log.pop()).toEqual({prop1: jasmine.objectContaining({previousValue: [1], currentValue: [2]})});
+            });
+          });
+
+
+          it('should trigger `$onChanges` for literal expressions when expression input value changes (complex value)', function() {
+            var log = [];
+            function TestController() { }
+            TestController.prototype.$onChanges = function(change) { log.push(change); };
+
+            angular.module('my', [])
+              .component('c1', {
+                controller: TestController,
+                bindings: { 'prop1': '<' }
+              });
+
+            module('my');
+            inject(function($compile, $rootScope) {
+              element = $compile('<c1 prop1="[val]"></c1>')($rootScope);
+
+              $rootScope.$apply('val = [1]');
+              expect(log.pop()).toEqual({prop1: jasmine.objectContaining({previousValue: [undefined], currentValue: [[1]]})});
+
+              $rootScope.$apply('val = [2]');
+              expect(log.pop()).toEqual({prop1: jasmine.objectContaining({previousValue: [[1]], currentValue: [[2]]})});
+            });
+          });
+
+
+          it('should trigger `$onChanges` for literal expressions when expression input value changes instances, even when equal', function() {
+            var log = [];
+            function TestController() { }
+            TestController.prototype.$onChanges = function(change) { log.push(change); };
+
+            angular.module('my', [])
+              .component('c1', {
+                controller: TestController,
+                bindings: { 'prop1': '<' }
+              });
+
+            module('my');
+            inject(function($compile, $rootScope) {
+              element = $compile('<c1 prop1="[val]"></c1>')($rootScope);
+
+              $rootScope.$apply('val = [1]');
+              expect(log.pop()).toEqual({prop1: jasmine.objectContaining({previousValue: [undefined], currentValue: [[1]]})});
+
+              $rootScope.$apply('val = [1]');
+              expect(log.pop()).toEqual({prop1: jasmine.objectContaining({previousValue: [[1]], currentValue: [[1]]})});
+            });
+          });
+
+
           it('should pass the original value as `previousValue` even if there were multiple changes in a single digest', function() {
             var log = [];
             function TestController() { }
@@ -5832,7 +5903,7 @@ describe('$compile', function() {
             }));
 
 
-            it('should deep-watch array literals', inject(function() {
+            it('should watch input values to array literals', inject(function() {
               $rootScope.name = 'georgios';
               $rootScope.obj = {name: 'pete'};
               compile('<div><span my-component ow-ref="[{name: name}, obj]">');
@@ -5846,7 +5917,7 @@ describe('$compile', function() {
             }));
 
 
-            it('should deep-watch object literals', inject(function() {
+            it('should watch input values object literals', inject(function() {
               $rootScope.name = 'georgios';
               $rootScope.obj = {name: 'pete'};
               compile('<div><span my-component ow-ref="{name: name, item: obj}">');
@@ -8645,7 +8716,7 @@ describe('$compile', function() {
                 expect(privateData.events.click).toBeDefined();
                 expect(privateData.events.click[0]).toBeDefined();
 
-                //Ensure the angular $destroy event is still sent
+                //Ensure the AngularJS $destroy event is still sent
                 var destroyCount = 0;
                 element.find('div').on('$destroy', function() { destroyCount++; });
 
@@ -8659,7 +8730,7 @@ describe('$compile', function() {
 
               it('should work without external libraries (except jQuery)', testCleanup);
 
-              it('should work with another library patching jQuery.cleanData after Angular', function() {
+              it('should work with another library patching jQuery.cleanData after AngularJS', function() {
                 var cleanedCount = 0;
                 var currentCleanData = jQuery.cleanData;
                 jQuery.cleanData = function(elems) {
@@ -8997,18 +9068,17 @@ describe('$compile', function() {
               }));
             });
 
-            inject(function($compile, $exceptionHandler, $rootScope, $templateCache) {
+            inject(function($compile, $rootScope, $templateCache) {
               $templateCache.put('noTransBar.html',
                 '<div>' +
                   // This ng-transclude is invalid. It should throw an error.
                   '<div class="bar" ng-transclude></div>' +
                 '</div>');
 
-              element = $compile('<div trans-foo>content</div>')($rootScope);
-              $rootScope.$digest();
-
-              expect($exceptionHandler.errors[0][1]).toBe('<div class="bar" ng-transclude="">');
-              expect($exceptionHandler.errors[0][0]).toEqualMinErr('ngTransclude', 'orphan',
+              expect(function() {
+                element = $compile('<div trans-foo>content</div>')($rootScope);
+                $rootScope.$digest();
+              }).toThrowMinErr('ngTransclude', 'orphan',
                   'Illegal use of ngTransclude directive in the template! ' +
                   'No parent directive that requires a transclusion found. ' +
                   'Element: <div class="bar" ng-transclude="">');
@@ -9821,13 +9891,13 @@ describe('$compile', function() {
                 transclude: 'element'
               }));
             });
-            inject(function($compile, $exceptionHandler, $httpBackend) {
+            inject(function($compile, $httpBackend) {
               $httpBackend.expectGET('template.html').respond('<p second>template.html</p>');
 
-              $compile('<div template first></div>');
-              $httpBackend.flush();
-
-              expect($exceptionHandler.errors[0]).toEqualMinErr('$compile', 'multidir',
+              expect(function() {
+                $compile('<div template first></div>');
+                $httpBackend.flush();
+              }).toThrowMinErr('$compile', 'multidir',
                   'Multiple directives [first, second] asking for transclusion on: <p ');
             });
           });

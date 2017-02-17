@@ -1456,6 +1456,18 @@ describe('basic usage', function() {
         $httpBackend.expect('POST', '/users/.json').respond();
         $resource('/users/\\.json').save({});
       });
+      it('should work with save() if dynamic params', function() {
+        $httpBackend.expect('POST', '/users/.json').respond();
+        $resource('/users/:json', {json: '\\.json'}).save({});
+      });
+      it('should work with query() if dynamic params', function() {
+        $httpBackend.expect('GET', '/users/.json').respond();
+        $resource('/users/:json', {json: '\\.json'}).query();
+      });
+      it('should work with get() if dynamic params', function() {
+        $httpBackend.expect('GET', '/users/.json').respond();
+        $resource('/users/:json', {json: '\\.json'}).get();
+      });
     });
   });
 
@@ -1708,6 +1720,76 @@ describe('handling rejections', function() {
       expect($exceptionHandler.errors.length).toBe(1);
       expect($exceptionHandler.errors[0]).toMatch(/^Possibly unhandled rejection/);
     })
+  );
+
+
+  it('should not swallow exceptions in success callback when error callback is provided',
+    function() {
+      $httpBackend.expectGET('/CreditCard/123').respond(null);
+      var CreditCard = $resource('/CreditCard/:id');
+      var cc = CreditCard.get({id: 123},
+          function(res) { throw new Error('should be caught'); },
+          function() {});
+
+      $httpBackend.flush();
+      expect($exceptionHandler.errors.length).toBe(1);
+      expect($exceptionHandler.errors[0]).toMatch(/^Error: should be caught/);
+    }
+  );
+
+
+  it('should not swallow exceptions in success callback when error callback is not provided',
+    function() {
+      $httpBackend.expectGET('/CreditCard/123').respond(null);
+      var CreditCard = $resource('/CreditCard/:id');
+      var cc = CreditCard.get({id: 123},
+          function(res) { throw new Error('should be caught'); });
+
+      $httpBackend.flush();
+      expect($exceptionHandler.errors.length).toBe(1);
+      expect($exceptionHandler.errors[0]).toMatch(/^Error: should be caught/);
+    }
+  );
+
+
+  it('should not swallow exceptions in success callback when error callback is provided and has responseError interceptor',
+    function() {
+      $httpBackend.expectGET('/CreditCard/123').respond(null);
+      var CreditCard = $resource('/CreditCard/:id', null, {
+        get: {
+          method: 'GET',
+          interceptor: {responseError: function() {}}
+        }
+      });
+
+      var cc = CreditCard.get({id: 123},
+          function(res) { throw new Error('should be caught'); },
+          function() {});
+
+      $httpBackend.flush();
+      expect($exceptionHandler.errors.length).toBe(1);
+      expect($exceptionHandler.errors[0]).toMatch(/^Error: should be caught/);
+    }
+  );
+
+
+  it('should not swallow exceptions in success callback when error callback is not provided and has responseError interceptor',
+    function() {
+      $httpBackend.expectGET('/CreditCard/123').respond(null);
+      var CreditCard = $resource('/CreditCard/:id', null, {
+        get: {
+          method: 'GET',
+          interceptor: {responseError: function() {}}
+        }
+      });
+
+      var cc = CreditCard.get({id: 123},
+          function(res) { throw new Error('should be caught'); });
+
+      $httpBackend.flush();
+      expect($exceptionHandler.errors.length).toBe(1);
+      expect($exceptionHandler.errors[0]).toMatch(/^Error: should be caught/);
+    }
   );
 });
 
