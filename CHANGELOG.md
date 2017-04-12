@@ -1,3 +1,95 @@
+<a name="1.6.4"></a>
+# 1.6.4 phenomenal-footnote (2017-03-31)
+
+
+## Bug Fixes
+- **$parse:**
+  - standardize one-time literal vs non-literal and interceptors
+  ([60394a](https://github.com/angular/angular.js/commit/60394a9d91dad8932fa900af7c8529837f1d4557),
+  [#15858](https://github.com/angular/angular.js/issues/15858))
+  - fix infinite digest errors when watching objects with .valueOf in literals
+  ([f5ddb1](https://github.com/angular/angular.js/commit/f5ddb10b56676c2ad912ce453acb87f0a7a94e01),
+  [#15867](https://github.com/angular/angular.js/issues/15867))
+- **ngModel:** prevent internal scope reference from being copied
+  ([e1f8a6](https://github.com/angular/angular.js/commit/e1f8a6e82bb8a70079ef3db9a891b1c08b5bae31),
+  [#15833](https://github.com/angular/angular.js/issues/15833))
+- **jqLite:** make jqLite invoke jqLite.cleanData as a method
+  ([9cde98](https://github.com/angular/angular.js/commit/9cde98cbc770f8d33fc074ba563b7ab6e2baaf8b),
+  [#15846](https://github.com/angular/angular.js/issues/15846))
+- **$http:** throw more informative error on invalid JSON response
+  ([df8887](https://github.com/angular/angular.js/commit/df88873bb79213057057adb47151b626a7ec0e5d),
+  [#15695](https://github.com/angular/angular.js/issues/15695),
+  [#15724](https://github.com/angular/angular.js/issues/15724))
+- **dateFilter:** correctly handle newlines in `format` string
+  ([982271](https://github.com/angular/angular.js/commit/9822711ad2a401c2449239edc13d18b301714757),
+  [#15794](https://github.com/angular/angular.js/issues/15794),
+  [#15792](https://github.com/angular/angular.js/issues/15792))
+
+
+## New Features
+- **$resource:** add `hasBody` action configuration option
+  ([a9f987](https://github.com/angular/angular.js/commit/a9f987a0c9653246ea471a89197907d94c0cea2a),
+  [#10128](https://github.com/angular/angular.js/issues/10128),
+  [#12181](https://github.com/angular/angular.js/issues/12181))
+
+
+<a name="1.6.3"></a>
+# 1.6.3 scriptalicious-bootstrapping (2017-03-08)
+
+
+## Bug Fixes
+- **Angular:**
+  - do not auto-bootstrap if the `src` exists but is empty
+  ([3536e8](https://github.com/angular/angular.js/commit/3536e83d8a085b02bd6dcec8324800b7e6c734e4))
+  - do not auto bootstrap if the currentScript has been clobbered
+  ([95f964](https://github.com/angular/angular.js/commit/95f964b827b6f5b5aab10af54f7831316c7a9935))
+  - do not auto-bootstrap if the script source is bad and inside SVG
+  ([c8f78a](https://github.com/angular/angular.js/commit/c8f78a8ca9debc33a6deaf951f344b8d372bf210))
+- **$log:** don't parse error stacks manually outside of IE/Edge
+  ([64e5af](https://github.com/angular/angular.js/commit/64e5afc4786fdfd850c6bdb488a5aa2b8b077f74),
+  [#15590](https://github.com/angular/angular.js/issues/15590),
+  [#15767](https://github.com/angular/angular.js/issues/15767))
+- **$sanitize:** prevent clobbered elements from freezing the browser
+  ([3bb1dd](https://github.com/angular/angular.js/commit/3bb1dd5d7f7dcde6fea5a3148f8f10e92f451e9d),
+  [#15699](https://github.com/angular/angular.js/issues/15699))
+- **$animate:**
+  - reset `classNameFilter` to `null` when a disallowed RegExp is used
+  ([a584fb](https://github.com/angular/angular.js/commit/a584fb6e1569fc1dd85e23b251a7c126edc2dd5b),
+  [#14913](https://github.com/angular/angular.js/issues/14913))
+  - improve detection on `ng-animate` in `classNameFilter` RegExp
+  ([1f1331](https://github.com/angular/angular.js/commit/1f13313f403381581e1c31c57ebfe7a96546c6e4),
+  [#14806](https://github.com/angular/angular.js/issues/14806))
+- **filterFilter:** don't throw if `key.charAt` is not a function
+  ([f27d19](https://github.com/angular/angular.js/commit/f27d19ed606bf05ba41698159ebbc5fbc195033e),
+  [#15644](https://github.com/angular/angular.js/issues/15644),
+  [#15660](https://github.com/angular/angular.js/issues/15660))
+- **select:**
+  - add attribute "selected" for `select[multiple]`
+  ([851367](https://github.com/angular/angular.js/commit/8513674911300b27d518383a905fde9b3f25f7ae))
+  - keep original selection when using shift to add options in IE/Edge
+  ([97b74a](https://github.com/angular/angular.js/commit/97b74ad6fbcbc4b63e37e9eb44962d6f8de83e8b),
+  [#15675](https://github.com/angular/angular.js/issues/15675),
+  [#15676](https://github.com/angular/angular.js/issues/15676))
+- **$jsonpCallbacks:** allow `$window` to be mocked in unit tests
+  ([5ca0de](https://github.com/angular/angular.js/commit/5ca0de64873c32ab2f540a3226e73c4175a15c50),
+  [#15685](https://github.com/angular/angular.js/issues/15685),
+  [#15686](https://github.com/angular/angular.js/issues/15686))
+
+
+## New Features
+- **info:** add `angularVersion` info to each module
+  ([1e582e](https://github.com/angular/angular.js/commit/1e582e4fa486f340150bba95927f1b26d9142de2))
+- **$injector:** add new `modules` property
+  ([742123](https://github.com/angular/angular.js/commit/7421235f247e5b7113345401bc5727cfbf81ddc2))
+- **Module:** add `info()` method
+  ([09ba69](https://github.com/angular/angular.js/commit/09ba69078de6ba52c70571b82b6205929f6facc5),
+  [#15225](https://github.com/angular/angular.js/issues/15225))
+- **errorHandlingConfig:** make the depth for object stringification in errors configurable
+  ([4a5eaf](https://github.com/angular/angular.js/commit/4a5eaf7bec85ceca8b934ebaff4d1834a1a09f57),
+  [#15402](https://github.com/angular/angular.js/issues/15402),
+  [#15433](https://github.com/angular/angular.js/issues/15433))
+
+
 <a name="1.6.2"></a>
 # 1.6.2 llamacorn-lovehug (2017-02-07)
 
@@ -56,7 +148,7 @@
   ([05aab6](https://github.com/angular/angular.js/commit/05aab660ce74f526f2110d3b5faf9a5b4f4e664b)
   [#15603](https://github.com/angular/angular.js/issues/15603),
   [#15605](https://github.com/angular/angular.js/issues/15605))
-- **angularInit:** allow auto-bootstraping from inline script
+- **angularInit:** allow auto-bootstrapping from inline script
   ([bb464d](https://github.com/angular/angular.js/commit/bb464d16b434b9e2de2fecf80c192d4741cba879),
   [#15567](https://github.com/angular/angular.js/issues/15567),
   [#15571](https://github.com/angular/angular.js/issues/15571))
@@ -84,7 +176,7 @@
   ([e75fbc](https://github.com/angular/angular.js/commit/e75fbc494e6a0da6a9231b40bb0382431b62be07),
   [#15586](https://github.com/angular/angular.js/issues/15586),
   [#15594](https://github.com/angular/angular.js/issues/15594))
-- **angularInit:** allow auto-bootstraping from inline script
+- **angularInit:** allow auto-bootstrapping from inline script
   ([41aa91](https://github.com/angular/angular.js/commit/41aa9125b9aaf771addb250642f524a4e6f9d8d3),
   [#15567](https://github.com/angular/angular.js/issues/15567),
   [#15571](https://github.com/angular/angular.js/issues/15571))
@@ -1099,7 +1191,7 @@ You configure this list in a module configuration block:
 
 ```js
 appModule.config(['$sceDelegateProvider', function($sceDelegateProvider) {
-  $sceDelegateProvider.resourceUrlWhiteList([
+  $sceDelegateProvider.resourceUrlWhitelist([
     // Allow same origin resource loads.
     'self',
     // Allow JSONP calls that match this pattern
@@ -2510,7 +2602,7 @@ You configure this list in a module configuration block:
 
 ```js
 appModule.config(['$sceDelegateProvider', function($sceDelegateProvider) {
-  $sceDelegateProvider.resourceUrlWhiteList([
+  $sceDelegateProvider.resourceUrlWhitelist([
     // Allow same origin resource loads.
     'self',
     // Allow JSONP calls that match this pattern
@@ -3101,6 +3193,18 @@ validation), you can overwrite the built-in `step` validator with a custom direc
 })
 ```
 
+<a name="1.2.32"></a>
+# 1.2.32 alternation-intention (2016-10-11)
+
+This release reverts the fix in 1.2.31 and provides an alternative fix that doesn't break Angular Material.
+
+## Reverts
+- **input:** ensure that hidden input values are correct after history back
+  ([ed44dd065](https://github.com/angular/angular.js/commit/ed44dd0659f346ced78a112e4a2b30d3af4fd572))
+
+## Bug Fixes
+- **$compile:** ensure that hidden input values are correct after history back
+  ([b8a0ecdd6](https://github.com/angular/angular.js/commit/b8a0ecdd6189fb111734eb5b6d4d473d0dcf4c36))
 
 
 <a name="1.4.13"></a>

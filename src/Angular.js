@@ -62,6 +62,7 @@
   includes,
   arrayRemove,
   copy,
+  simpleCompare,
   equals,
   csp,
   jq,
@@ -173,15 +174,7 @@ function isValidObjectMaxDepth(maxDepth) {
 }
 
 /**
- * @ngdoc function
- * @name angular.lowercase
- * @module ng
- * @kind function
- *
- * @deprecated
- * sinceVersion="1.5.0"
- * removeVersion="1.7.0"
- * Use [String.prototype.toLowerCase](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/String/toLowerCase) instead.
+ * @private
  *
  * @description Converts the specified string to lowercase.
  * @param {string} string String to be converted to lowercase.
@@ -190,15 +183,7 @@ function isValidObjectMaxDepth(maxDepth) {
 var lowercase = function(string) {return isString(string) ? string.toLowerCase() : string;};
 
 /**
- * @ngdoc function
- * @name angular.uppercase
- * @module ng
- * @kind function
- *
- * @deprecated
- * sinceVersion="1.5.0"
- * removeVersion="1.7.0"
- * Use [String.prototype.toUpperCase](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/String/toUpperCase) instead.
+ * @private
  *
  * @description Converts the specified string to uppercase.
  * @param {string} string String to be converted to uppercase.
@@ -1040,6 +1025,10 @@ function copy(source, destination, maxDepth) {
 }
 
 
+// eslint-disable-next-line no-self-compare
+function simpleCompare(a, b) { return a === b || (a !== a && b !== b); }
+
+
 /**
  * @ngdoc function
  * @name angular.equals
@@ -1120,7 +1109,7 @@ function equals(o1, o2) {
       }
     } else if (isDate(o1)) {
       if (!isDate(o2)) return false;
-      return equals(o1.getTime(), o2.getTime());
+      return simpleCompare(o1.getTime(), o2.getTime());
     } else if (isRegExp(o1)) {
       if (!isRegExp(o2)) return false;
       return o1.toString() === o2.toString();
@@ -1532,33 +1521,50 @@ function getNgAttribute(element, ngAttr) {
 
 function allowAutoBootstrap(document) {
   var script = document.currentScript;
-  var src = script && script.getAttribute('src');
 
-  if (!src) {
+  if (!script) {
+    // IE does not have `document.currentScript`
     return true;
   }
 
-  var link = document.createElement('a');
-  link.href = src;
-
-  if (document.location.origin === link.origin) {
-    // Same-origin resources are always allowed, even for non-whitelisted schemes.
-    return true;
+  // If the `currentScript` property has been clobbered just return false, since this indicates a probable attack
+  if (!(script instanceof window.HTMLScriptElement || script instanceof window.SVGScriptElement)) {
+    return false;
   }
-  // Disabled bootstrapping unless angular.js was loaded from a known scheme used on the web.
-  // This is to prevent angular.js bundled with browser extensions from being used to bypass the
-  // content security policy in web pages and other browser extensions.
-  switch (link.protocol) {
-    case 'http:':
-    case 'https:':
-    case 'ftp:':
-    case 'blob:':
-    case 'file:':
-    case 'data:':
+
+  var attributes = script.attributes;
+  var srcs = [attributes.getNamedItem('src'), attributes.getNamedItem('href'), attributes.getNamedItem('xlink:href')];
+
+  return srcs.every(function(src) {
+    if (!src) {
       return true;
-    default:
+    }
+    if (!src.value) {
       return false;
-  }
+    }
+
+    var link = document.createElement('a');
+    link.href = src.value;
+
+    if (document.location.origin === link.origin) {
+      // Same-origin resources are always allowed, even for non-whitelisted schemes.
+      return true;
+    }
+    // Disabled bootstrapping unless angular.js was loaded from a known scheme used on the web.
+    // This is to prevent angular.js bundled with browser extensions from being used to bypass the
+    // content security policy in web pages and other browser extensions.
+    switch (link.protocol) {
+      case 'http:':
+      case 'https:':
+      case 'ftp:':
+      case 'blob:':
+      case 'file:':
+      case 'data:':
+        return true;
+      default:
+        return false;
+    }
+  });
 }
 
 // Cached as it has to run during loading so that document.currentScript is available.

@@ -1867,6 +1867,8 @@ describe('parser', function() {
         expect(scope.$eval('+\'1\'')).toEqual(+'1');
         expect(scope.$eval('-\'1\'')).toEqual(-'1');
         expect(scope.$eval('+undefined')).toEqual(0);
+
+        // Note: don't change toEqual to toBe as toBe collapses 0 & -0.
         expect(scope.$eval('-undefined')).toEqual(-0);
         expect(scope.$eval('+null')).toEqual(+null);
         expect(scope.$eval('-null')).toEqual(-null);
@@ -2686,82 +2688,86 @@ describe('parser', function() {
             expect($parse('::    ').literal).toBe(true);
           }));
 
-          it('should only become stable when all the properties of an object have defined values', inject(function($parse, $rootScope, log) {
-            var fn = $parse('::{foo: foo, bar: bar}');
-            $rootScope.$watch(fn, function(value) { log(value); }, true);
+          [true, false].forEach(function(isDeep) {
+            describe(isDeep ? 'deepWatch' : 'watch', function() {
+              it('should only become stable when all the properties of an object have defined values', inject(function($parse, $rootScope, log) {
+                var fn = $parse('::{foo: foo, bar: bar}');
+                $rootScope.$watch(fn, function(value) { log(value); }, isDeep);
 
-            expect(log.empty()).toEqual([]);
-            expect($rootScope.$$watchers.length).toBe(1);
+                expect(log.empty()).toEqual([]);
+                expect($rootScope.$$watchers.length).toBe(1);
 
-            $rootScope.$digest();
-            expect($rootScope.$$watchers.length).toBe(1);
-            expect(log.empty()).toEqual([{foo: undefined, bar: undefined}]);
+                $rootScope.$digest();
+                expect($rootScope.$$watchers.length).toBe(1);
+                expect(log.empty()).toEqual([{foo: undefined, bar: undefined}]);
 
-            $rootScope.foo = 'foo';
-            $rootScope.$digest();
-            expect($rootScope.$$watchers.length).toBe(1);
-            expect(log.empty()).toEqual([{foo: 'foo', bar: undefined}]);
+                $rootScope.foo = 'foo';
+                $rootScope.$digest();
+                expect($rootScope.$$watchers.length).toBe(1);
+                expect(log.empty()).toEqual([{foo: 'foo', bar: undefined}]);
 
-            $rootScope.foo = 'foobar';
-            $rootScope.bar = 'bar';
-            $rootScope.$digest();
-            expect($rootScope.$$watchers.length).toBe(0);
-            expect(log.empty()).toEqual([{foo: 'foobar', bar: 'bar'}]);
+                $rootScope.foo = 'foobar';
+                $rootScope.bar = 'bar';
+                $rootScope.$digest();
+                expect($rootScope.$$watchers.length).toBe(0);
+                expect(log.empty()).toEqual([{foo: 'foobar', bar: 'bar'}]);
 
-            $rootScope.foo = 'baz';
-            $rootScope.$digest();
-            expect($rootScope.$$watchers.length).toBe(0);
-            expect(log.empty()).toEqual([]);
-          }));
+                $rootScope.foo = 'baz';
+                $rootScope.$digest();
+                expect($rootScope.$$watchers.length).toBe(0);
+                expect(log.empty()).toEqual([]);
+              }));
 
-          it('should only become stable when all the elements of an array have defined values', inject(function($parse, $rootScope, log) {
-            var fn = $parse('::[foo,bar]');
-            $rootScope.$watch(fn, function(value) { log(value); }, true);
+              it('should only become stable when all the elements of an array have defined values', inject(function($parse, $rootScope, log) {
+                var fn = $parse('::[foo,bar]');
+                $rootScope.$watch(fn, function(value) { log(value); }, isDeep);
 
-            expect(log.empty()).toEqual([]);
-            expect($rootScope.$$watchers.length).toBe(1);
+                expect(log.empty()).toEqual([]);
+                expect($rootScope.$$watchers.length).toBe(1);
 
-            $rootScope.$digest();
-            expect($rootScope.$$watchers.length).toBe(1);
-            expect(log.empty()).toEqual([[undefined, undefined]]);
+                $rootScope.$digest();
+                expect($rootScope.$$watchers.length).toBe(1);
+                expect(log.empty()).toEqual([[undefined, undefined]]);
 
-            $rootScope.foo = 'foo';
-            $rootScope.$digest();
-            expect($rootScope.$$watchers.length).toBe(1);
-            expect(log.empty()).toEqual([['foo', undefined]]);
+                $rootScope.foo = 'foo';
+                $rootScope.$digest();
+                expect($rootScope.$$watchers.length).toBe(1);
+                expect(log.empty()).toEqual([['foo', undefined]]);
 
-            $rootScope.foo = 'foobar';
-            $rootScope.bar = 'bar';
-            $rootScope.$digest();
-            expect($rootScope.$$watchers.length).toBe(0);
-            expect(log.empty()).toEqual([['foobar', 'bar']]);
+                $rootScope.foo = 'foobar';
+                $rootScope.bar = 'bar';
+                $rootScope.$digest();
+                expect($rootScope.$$watchers.length).toBe(0);
+                expect(log.empty()).toEqual([['foobar', 'bar']]);
 
-            $rootScope.foo = 'baz';
-            $rootScope.$digest();
-            expect($rootScope.$$watchers.length).toBe(0);
-            expect(log.empty()).toEqual([]);
-          }));
+                $rootScope.foo = 'baz';
+                $rootScope.$digest();
+                expect($rootScope.$$watchers.length).toBe(0);
+                expect(log.empty()).toEqual([]);
+              }));
 
-          it('should only become stable when all the elements of an array have defined values at the end of a $digest', inject(function($parse, $rootScope, log) {
-            var fn = $parse('::[foo]');
-            $rootScope.$watch(fn, function(value) { log(value); }, true);
-            $rootScope.$watch('foo', function() { if ($rootScope.foo === 'bar') {$rootScope.foo = undefined; } });
+              it('should only become stable when all the elements of an array have defined values at the end of a $digest', inject(function($parse, $rootScope, log) {
+                var fn = $parse('::[foo]');
+                $rootScope.$watch(fn, function(value) { log(value); }, isDeep);
+                $rootScope.$watch('foo', function() { if ($rootScope.foo === 'bar') {$rootScope.foo = undefined; } });
 
-            $rootScope.foo = 'bar';
-            $rootScope.$digest();
-            expect($rootScope.$$watchers.length).toBe(2);
-            expect(log.empty()).toEqual([['bar'], [undefined]]);
+                $rootScope.foo = 'bar';
+                $rootScope.$digest();
+                expect($rootScope.$$watchers.length).toBe(2);
+                expect(log.empty()).toEqual([['bar'], [undefined]]);
 
-            $rootScope.foo = 'baz';
-            $rootScope.$digest();
-            expect($rootScope.$$watchers.length).toBe(1);
-            expect(log.empty()).toEqual([['baz']]);
+                $rootScope.foo = 'baz';
+                $rootScope.$digest();
+                expect($rootScope.$$watchers.length).toBe(1);
+                expect(log.empty()).toEqual([['baz']]);
 
-            $rootScope.bar = 'qux';
-            $rootScope.$digest();
-            expect($rootScope.$$watchers.length).toBe(1);
-            expect(log).toEqual([]);
-          }));
+                $rootScope.bar = 'qux';
+                $rootScope.$digest();
+                expect($rootScope.$$watchers.length).toBe(1);
+                expect(log).toEqual([]);
+              }));
+            });
+          });
         });
       });
 
@@ -2866,6 +2872,40 @@ describe('parser', function() {
           expect(called).toBe(false);
 
           scope.a++;
+          scope.$digest();
+          expect(called).toBe(true);
+        }));
+
+        it('should not invoke interceptorFns unless the input.valueOf changes even if the instance changes', inject(function($parse) {
+          var called = false;
+          function interceptor(v) {
+            called = true;
+            return v;
+          }
+          scope.$watch($parse('a', interceptor));
+          scope.a = new Date();
+          scope.$digest();
+          expect(called).toBe(true);
+
+          called = false;
+          scope.a = new Date(scope.a.valueOf());
+          scope.$digest();
+          expect(called).toBe(false);
+        }));
+
+        it('should invoke interceptorFns if input.valueOf changes even if the instance does not', inject(function($parse) {
+          var called = false;
+          function interceptor(v) {
+            called = true;
+            return v;
+          }
+          scope.$watch($parse('a', interceptor));
+          scope.a = new Date();
+          scope.$digest();
+          expect(called).toBe(true);
+
+          called = false;
+          scope.a.setTime(scope.a.getTime() + 1);
           scope.$digest();
           expect(called).toBe(true);
         }));
@@ -3036,6 +3076,63 @@ describe('parser', function() {
           called = false;
           scope.$digest();
           expect(called).toBe(true);
+        }));
+
+        it('should not reevaluate literals with non-primitive input that does support valueOf()',
+            inject(function($parse) {
+
+          var date = scope.date = new Date();
+
+          var parsed = $parse('[date]');
+          var watcherCalls = 0;
+          scope.$watch(parsed, function(input) {
+            expect(input[0]).toBe(date);
+            watcherCalls++;
+          });
+
+          scope.$digest();
+          expect(watcherCalls).toBe(1);
+
+          scope.$digest();
+          expect(watcherCalls).toBe(1);
+        }));
+
+        it('should not reevaluate literals with non-primitive input that does support valueOf()' +
+            ' when the instance changes but valueOf() does not', inject(function($parse) {
+
+          scope.date = new Date(1234567890123);
+
+          var parsed = $parse('[date]');
+          var watcherCalls = 0;
+          scope.$watch(parsed, function(input) {
+            watcherCalls++;
+          });
+
+          scope.$digest();
+          expect(watcherCalls).toBe(1);
+
+          scope.date = new Date(1234567890123);
+          scope.$digest();
+          expect(watcherCalls).toBe(1);
+        }));
+
+        it('should reevaluate literals with non-primitive input that does support valueOf()' +
+            ' when the instance does not change but valueOf() does', inject(function($parse) {
+
+          scope.date = new Date(1234567890123);
+
+          var parsed = $parse('[date]');
+          var watcherCalls = 0;
+          scope.$watch(parsed, function(input) {
+            watcherCalls++;
+          });
+
+          scope.$digest();
+          expect(watcherCalls).toBe(1);
+
+          scope.date.setTime(scope.date.getTime() + 1);
+          scope.$digest();
+          expect(watcherCalls).toBe(2);
         }));
 
         it('should continue with the evaluation of the expression without invoking computed parts',

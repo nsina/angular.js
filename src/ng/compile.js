@@ -277,10 +277,12 @@
  * the directive's element. If multiple directives on the same element request a new scope,
  * only one new scope is created.
  *
- * * **`{...}` (an object hash):** A new "isolate" scope is created for the directive's element. The
- * 'isolate' scope differs from normal scope in that it does not prototypically inherit from its parent
- * scope. This is useful when creating reusable components, which should not accidentally read or modify
- * data in the parent scope.
+ * * **`{...}` (an object hash):** A new "isolate" scope is created for the directive's template.
+ * The 'isolate' scope differs from normal scope in that it does not prototypically
+ * inherit from its parent scope. This is useful when creating reusable components, which should not
+ * accidentally read or modify data in the parent scope. Note that an isolate scope
+ * directive without a `template` or `templateUrl` will not apply the isolate scope
+ * to its children elements.
  *
  * The 'isolate' scope object hash defines a set of local scope properties derived from attributes on the
  * directive's element. These local properties are useful for aliasing values for templates. The keys in
@@ -371,12 +373,6 @@
  * properties. You can access these bindings once they have been initialized by providing a controller method called
  * `$onInit`, which is called after all the controllers on an element have been constructed and had their bindings
  * initialized.
- *
- * <div class="alert alert-warning">
- * **Deprecation warning:** although bindings for non-ES6 class controllers are currently
- * bound to `this` before the controller constructor is called, this use is now deprecated. Please place initialization
- * code that relies upon bindings inside a `$onInit` method on the controller, instead.
- * </div>
  *
  * It is also possible to set `bindToController` to an object hash with the same format as the `scope` property.
  * This will set up the scope bindings to the controller directly. Note that `scope` can still be used
@@ -1370,36 +1366,6 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
     return debugInfoEnabled;
   };
 
-  /**
-   * @ngdoc method
-   * @name  $compileProvider#preAssignBindingsEnabled
-   *
-   * @param {boolean=} enabled update the preAssignBindingsEnabled state if provided, otherwise just return the
-   * current preAssignBindingsEnabled state
-   * @returns {*} current value if used as getter or itself (chaining) if used as setter
-   *
-   * @kind function
-   *
-   * @description
-   * Call this method to enable/disable whether directive controllers are assigned bindings before
-   * calling the controller's constructor.
-   * If enabled (true), the compiler assigns the value of each of the bindings to the
-   * properties of the controller object before the constructor of this object is called.
-   *
-   * If disabled (false), the compiler calls the constructor first before assigning bindings.
-   *
-   * The default value is true in AngularJS 1.5.x but will switch to false in AngularJS 1.6.x.
-   */
-  var preAssignBindingsEnabled = false;
-  this.preAssignBindingsEnabled = function(enabled) {
-    if (isDefined(enabled)) {
-      preAssignBindingsEnabled = enabled;
-      return this;
-    }
-    return preAssignBindingsEnabled;
-  };
-
-
   var TTL = 10;
   /**
    * @ngdoc method
@@ -1671,9 +1637,10 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
         nodeName = nodeName_(this.$$element);
 
         if ((nodeName === 'a' && (key === 'href' || key === 'xlinkHref')) ||
-            (nodeName === 'img' && key === 'src')) {
+            (nodeName === 'img' && key === 'src') ||
+            (nodeName === 'image' && key === 'xlinkHref')) {
           // sanitize a[href] and img[src] values
-          this[key] = value = $$sanitizeUri(value, key === 'src');
+          this[key] = value = $$sanitizeUri(value, nodeName === 'img' || nodeName === 'image');
         } else if (nodeName === 'img' && key === 'srcset' && isDefined(value)) {
           // sanitize img[srcset] values
           var result = '';
@@ -2719,33 +2686,11 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
           var controller = elementControllers[name];
           var bindings = controllerDirective.$$bindings.bindToController;
 
-          if (preAssignBindingsEnabled) {
-            if (bindings) {
-              controller.bindingInfo =
-                initializeDirectiveBindings(controllerScope, attrs, controller.instance, bindings, controllerDirective);
-            } else {
-              controller.bindingInfo = {};
-            }
-
-            var controllerResult = controller();
-            if (controllerResult !== controller.instance) {
-              // If the controller constructor has a return value, overwrite the instance
-              // from setupControllers
-              controller.instance = controllerResult;
-              $element.data('$' + controllerDirective.name + 'Controller', controllerResult);
-              if (controller.bindingInfo.removeWatches) {
-                controller.bindingInfo.removeWatches();
-              }
-              controller.bindingInfo =
-                initializeDirectiveBindings(controllerScope, attrs, controller.instance, bindings, controllerDirective);
-            }
-          } else {
-            controller.instance = controller();
-            $element.data('$' + controllerDirective.name + 'Controller', controller.instance);
-            controller.bindingInfo =
-              initializeDirectiveBindings(controllerScope, attrs, controller.instance, bindings, controllerDirective);
+          controller.instance = controller();
+          $element.data('$' + controllerDirective.name + 'Controller', controller.instance);
+          controller.bindingInfo =
+            initializeDirectiveBindings(controllerScope, attrs, controller.instance, bindings, controllerDirective);
           }
-        }
 
         // Bind the required controllers to the controller, if `require` is an object and `bindToController` is truthy
         forEach(controllerDirectives, function(controllerDirective, name) {
@@ -3254,8 +3199,10 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
         if (['img', 'video', 'audio', 'source', 'track'].indexOf(tag) === -1) {
           return $sce.RESOURCE_URL;
         }
-      // maction[xlink:href] can source SVG.  It's not limited to <maction>.
-      } else if (attrNormalizedName === 'xlinkHref' ||
+      } else if (
+          // Some xlink:href are okay, most aren't
+          (attrNormalizedName === 'xlinkHref' && (tag !== 'image' && tag !== 'a')) ||
+          // Formaction
           (tag === 'form' && attrNormalizedName === 'action') ||
           // If relative URLs can go where they are not expected to, then
           // all sorts of trust issues can arise.
@@ -3481,8 +3428,7 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
             if (parentGet.literal) {
               compare = equals;
             } else {
-              // eslint-disable-next-line no-self-compare
-              compare = function simpleCompare(a, b) { return a === b || (a !== a && b !== b); };
+              compare = simpleCompare;
             }
             parentSet = parentGet.assign || function() {
               // reset the change, or we will throw this exception on every $digest
@@ -3557,9 +3503,7 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
       });
 
       function recordChanges(key, currentValue, previousValue) {
-        if (isFunction(destination.$onChanges) && currentValue !== previousValue &&
-            // eslint-disable-next-line no-self-compare
-            (currentValue === currentValue || previousValue === previousValue)) {
+        if (isFunction(destination.$onChanges) && !simpleCompare(currentValue, previousValue)) {
           // If we have not already scheduled the top level onChangesQueue handler then do so now
           if (!onChangesQueue) {
             scope.$$postDigest(flushOnChangesQueue);

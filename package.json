@@ -10,7 +10,7 @@
   },
   "engines": {
     "node": "^6.9.1",
-    "yarn": ">=0.17.9",
+    "yarn": ">=0.21.3",
     "grunt": "^1.2.0"
   },
   "scripts": {
@@ -59,7 +59,7 @@
     "jasmine-core": "^2.4.0",
     "jasmine-node": "^2.0.0",
     "jasmine-reporters": "^2.2.0",
-    "jquery": "^3.1.1",
+    "jquery": "^3.2.1",
     "karma": "^1.1.2",
     "karma-browserstack-launcher": "^1.0.1",
     "karma-chrome-launcher": "^1.0.1",
