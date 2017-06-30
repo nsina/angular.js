@@ -7,7 +7,6 @@ Float32Array, Float64Array,  */
 
 describe('angular', function() {
   var element, document;
-  var originalObjectMaxDepthInErrorMessage = minErrConfig.objectMaxDepth;
 
   beforeEach(function() {
     document = window.document;
@@ -15,30 +14,6 @@ describe('angular', function() {
 
   afterEach(function() {
     dealoc(element);
-    minErrConfig.objectMaxDepth = originalObjectMaxDepthInErrorMessage;
-  });
-
-  describe('errorHandlingConfig', function() {
-    it('should get default objectMaxDepth', function() {
-      expect(errorHandlingConfig().objectMaxDepth).toBe(5);
-    });
-
-    it('should set objectMaxDepth', function() {
-      errorHandlingConfig({objectMaxDepth: 3});
-      expect(errorHandlingConfig().objectMaxDepth).toBe(3);
-    });
-
-    it('should not change objectMaxDepth when undefined is supplied', function() {
-      errorHandlingConfig({objectMaxDepth: undefined});
-      expect(errorHandlingConfig().objectMaxDepth).toBe(originalObjectMaxDepthInErrorMessage);
-    });
-
-    they('should set objectMaxDepth to NaN when $prop is supplied',
-        [NaN, null, true, false, -1, 0], function(maxDepth) {
-          errorHandlingConfig({objectMaxDepth: maxDepth});
-          expect(errorHandlingConfig().objectMaxDepth).toBeNaN();
-        }
-    );
   });
 
   describe('case', function() {
@@ -1733,6 +1708,7 @@ describe('angular', function() {
       dealoc(appElement);
     });
 
+    // Support: IE 9-11 only
     // IE does not support `document.currentScript` (nor extensions with protocol), so skip tests.
     if (!msie) {
       describe('auto bootstrap restrictions', function() {
@@ -1755,8 +1731,7 @@ describe('angular', function() {
           };
         }
 
-        it('should bootstrap from an extension into an extension document for same-origin documents only', function() {
-
+        describe('from extensions into extension documents', function() {
           // Extension URLs are browser-specific, so we must choose a scheme that is supported by the browser to make
           // sure that the URL is properly parsed.
           var protocol;
@@ -1773,9 +1748,28 @@ describe('angular', function() {
             protocol = 'browserext:';  // Upcoming standard scheme.
           }
 
-          expect(allowAutoBootstrap(createFakeDoc({src: protocol + '//something'}, protocol))).toBe(true);
-          expect(allowAutoBootstrap(createFakeDoc({src: protocol + '//something-else'}, protocol))).toBe(false);
+
+          if (protocol === 'ms-browser-extension:') {
+            // Support: Edge 13-15
+            // In Edge, URLs with protocol 'ms-browser-extension:' return "null" for the origin,
+            // therefore it's impossible to know if a script is same-origin.
+            it('should not bootstrap for same-origin documents', function() {
+              expect(allowAutoBootstrap(createFakeDoc({src: protocol + '//something'}, protocol))).toBe(false);
+            });
+
+          } else {
+            it('should bootstrap for same-origin documents', function() {
+
+              expect(allowAutoBootstrap(createFakeDoc({src: protocol + '//something'}, protocol))).toBe(true);
+            });
+          }
+
+          it('should not bootstrap for cross-origin documents', function() {
+            expect(allowAutoBootstrap(createFakeDoc({src: protocol + '//something-else'}, protocol))).toBe(false);
+          });
+
         });
+
 
         it('should bootstrap from a script with no source (e.g. src, href or xlink:href attributes)', function() {
 
@@ -1861,6 +1855,43 @@ describe('angular', function() {
     });
   });
 
+  describe('isError', function() {
+    function testErrorFromDifferentContext(createError) {
+      var iframe = document.createElement('iframe');
+      document.body.appendChild(iframe);
+      try {
+        var error = createError(iframe.contentWindow);
+        expect(isError(error)).toBe(true);
+      } finally {
+        iframe.parentElement.removeChild(iframe);
+      }
+    }
+
+    it('should not assume objects are errors', function() {
+      var fakeError = { message: 'A fake error', stack: 'no stack here'};
+      expect(isError(fakeError)).toBe(false);
+    });
+
+    it('should detect simple error instances', function() {
+      expect(isError(new Error())).toBe(true);
+    });
+
+    it('should detect errors from another context', function() {
+      testErrorFromDifferentContext(function(win) {
+        return new win.Error();
+      });
+    });
+
+    it('should detect DOMException errors from another context', function() {
+      testErrorFromDifferentContext(function(win) {
+        try {
+          win.document.querySelectorAll('');
+        } catch (e) {
+          return e;
+        }
+      });
+    });
+  });
 
   describe('isRegExp', function() {
     it('should return true for RegExp object', function() {

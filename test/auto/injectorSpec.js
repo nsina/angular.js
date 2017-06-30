@@ -1,7 +1,5 @@
 'use strict';
 
-/* globals support: false */
-
 describe('injector.modules', function() {
     it('should expose the loaded module info on the instance injector', function() {
       var test1 = angular.module('test1', ['test2']).info({ version: '1.1' });
@@ -285,16 +283,16 @@ describe('injector', function() {
 
 
     describe('es6', function() {
-      if (support.ES6Function) {
+      if (support.shorthandMethods) {
         // The functions are generated using `eval` as just having the ES6 syntax can break some browsers.
-        it('should be possible to annotate functions that are declared using ES6 syntax', function() {
+        it('should be possible to annotate shorthand methods', function() {
           // eslint-disable-next-line no-eval
           expect(annotate(eval('({ fn(x) { return; } })').fn)).toEqual(['x']);
         });
       }
 
 
-      if (support.fatArrow) {
+      if (support.fatArrows) {
         it('should create $inject for arrow functions', function() {
           // eslint-disable-next-line no-eval
           expect(annotate(eval('(a, b) => a'))).toEqual(['a', 'b']);
@@ -302,7 +300,7 @@ describe('injector', function() {
       }
 
 
-      if (support.fatArrow) {
+      if (support.fatArrows) {
         it('should create $inject for arrow functions with no parenthesis', function() {
           // eslint-disable-next-line no-eval
           expect(annotate(eval('a => a'))).toEqual(['a']);
@@ -310,7 +308,7 @@ describe('injector', function() {
       }
 
 
-      if (support.fatArrow) {
+      if (support.fatArrows) {
         it('should take args before first arrow', function() {
           // eslint-disable-next-line no-eval
           expect(annotate(eval('a => b => b'))).toEqual(['a']);
@@ -327,26 +325,24 @@ describe('injector', function() {
           expect(instance.aVal()).toEqual('a-value');
         });
 
-        if (/chrome/.test(window.navigator.userAgent)) {
-          they('should detect ES6 classes regardless of whitespace/comments ($prop)', [
-            'class Test {}',
-            'class Test{}',
-            'class //<--ES6 stuff\nTest {}',
-            'class//<--ES6 stuff\nTest {}',
-            'class {}',
-            'class{}',
-            'class //<--ES6 stuff\n {}',
-            'class//<--ES6 stuff\n {}',
-            'class/* Test */{}',
-            'class /* Test */ {}'
-          ], function(classDefinition) {
-            // eslint-disable-next-line no-eval
-            var Clazz = eval('(' + classDefinition + ')');
-            var instance = injector.invoke(Clazz);
+        they('should detect ES6 classes regardless of whitespace/comments ($prop)', [
+          'class Test {}',
+          'class Test{}',
+          'class //<--ES6 stuff\nTest {}',
+          'class//<--ES6 stuff\nTest {}',
+          'class {}',
+          'class{}',
+          'class //<--ES6 stuff\n {}',
+          'class//<--ES6 stuff\n {}',
+          'class/* Test */{}',
+          'class /* Test */ {}'
+        ], function(classDefinition) {
+          // eslint-disable-next-line no-eval
+          var Clazz = eval('(' + classDefinition + ')');
+          var instance = injector.invoke(Clazz);
 
-            expect(instance).toEqual(jasmine.any(Clazz));
-          });
-        }
+          expect(instance).toEqual(jasmine.any(Clazz));
+        });
       }
     });
 

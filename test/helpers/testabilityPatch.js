@@ -3,39 +3,11 @@
 
 if (window.bindJQuery) bindJQuery();
 
-var supportTests = {
-  classes: '(class {})',
-  fatArrow: 'a => a',
-  ES6Function: '({ fn(x) { return; } })'
-};
-
-var support = {};
-
-for (var prop in supportTests) {
-  if (supportTests.hasOwnProperty(prop)) {
-    try {
-      // eslint-disable-next-line no-eval
-      eval(supportTests[prop]);
-      support[prop] = true;
-    } catch (e) {
-      support[prop] = false;
-    }
-  }
-}
-
-
 beforeEach(function() {
 
   // all this stuff is not needed for module tests, where jqlite and publishExternalAPI and jqLite are not global vars
   if (window.publishExternalAPI) {
     publishExternalAPI(angular);
-
-    // workaround for IE bug https://plus.google.com/104744871076396904202/posts/Kqjuj6RSbbT
-    // IE overwrite window.jQuery with undefined because of empty jQuery var statement, so we have to
-    // correct this, but only if we are not running in jqLite mode
-    if (!_jqLiteMode && _jQuery !== jQuery) {
-      jQuery = _jQuery;
-    }
 
     // This resets global id counter;
     uid = 0;
@@ -57,7 +29,7 @@ afterEach(function() {
   // These Nodes are persisted across tests.
   // They used to be assigned a `$$hashKey` when animated, which we needed to clear after each test
   // to avoid affecting other tests. This is no longer the case, so we are just ensuring that there
-  // is indeed no `$$hachKey` on them.
+  // is indeed no `$$hashKey` on them.
   var doc = window.document;
   var html = doc.querySelector('html');
   var body = doc.body;
@@ -184,6 +156,7 @@ function sortedHtml(element, showNgClass) {
 
         var attr = attributes[i];
         if (attr.name.match(/^ng[:-]/) ||
+            !/^ng\d+/.test(attr.name) &&
             (attr.value || attr.value === '') &&
             attr.value !== 'null' &&
             attr.value !== 'auto' &&
@@ -199,19 +172,6 @@ function sortedHtml(element, showNgClass) {
             attr.name !== 'tabIndex' &&
             attr.name !== 'style' &&
             attr.name.substr(0, 6) !== 'jQuery') {
-          // in IE we need to check for all of these.
-          if (/ng\d+/.exec(attr.name) ||
-              attr.name === 'getElementById' ||
-              // IE7 has `selected` in attributes
-              attr.name === 'selected' ||
-              // IE7 adds `value` attribute to all LI tags
-              (node.nodeName === 'LI' && attr.name === 'value') ||
-              // IE8 adds bogus rowspan=1 and colspan=1 to TD elements
-              (node.nodeName === 'TD' && attr.name === 'rowSpan' && attr.value === '1') ||
-              (node.nodeName === 'TD' && attr.name === 'colSpan' && attr.value === '1')) {
-            continue;
-          }
-
           attrs.push(' ' + attr.name + '="' + attr.value + '"');
         }
       }

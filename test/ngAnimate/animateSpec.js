@@ -307,6 +307,184 @@ describe('animations', function() {
       });
     });
 
+    it('should not try to match the `classNameFilter` RegExp if animations are globally disabled',
+      function() {
+        var regex = /foo/;
+        var regexTestSpy = spyOn(regex, 'test').and.callThrough();
+
+        module(function($animateProvider) {
+          $animateProvider.classNameFilter(regex);
+        });
+
+        inject(function($animate) {
+          $animate.addClass(element, 'foo');
+          expect(regexTestSpy).toHaveBeenCalled();
+
+          regexTestSpy.calls.reset();
+          $animate.enabled(false);
+          $animate.addClass(element, 'bar');
+          expect(regexTestSpy).not.toHaveBeenCalled();
+
+          regexTestSpy.calls.reset();
+          $animate.enabled(true);
+          $animate.addClass(element, 'baz');
+          expect(regexTestSpy).toHaveBeenCalled();
+        });
+      }
+    );
+
+    describe('customFilter()', function() {
+      it('should be `null` by default', module(function($animateProvider) {
+        expect($animateProvider.customFilter()).toBeNull();
+      }));
+
+      it('should clear the `customFilter` if no function is passed',
+        module(function($animateProvider) {
+          $animateProvider.customFilter(angular.noop);
+          expect($animateProvider.customFilter()).toEqual(jasmine.any(Function));
+
+          $animateProvider.customFilter(null);
+          expect($animateProvider.customFilter()).toBeNull();
+
+          $animateProvider.customFilter(angular.noop);
+          expect($animateProvider.customFilter()).toEqual(jasmine.any(Function));
+
+          $animateProvider.customFilter({});
+          expect($animateProvider.customFilter()).toBeNull();
+        })
+      );
+
+      it('should only perform animations for which the function returns a truthy value',
+        function() {
+          var animationsAllowed = false;
+
+          module(function($animateProvider) {
+            $animateProvider.customFilter(function() { return animationsAllowed; });
+          });
+
+          inject(function($animate, $rootScope) {
+            $animate.enter(element, parent);
+            $rootScope.$digest();
+            expect(capturedAnimation).toBeNull();
+
+            $animate.leave(element, parent);
+            $rootScope.$digest();
+            expect(capturedAnimation).toBeNull();
+
+            animationsAllowed = true;
+
+            $animate.enter(element, parent);
+            $rootScope.$digest();
+            expect(capturedAnimation).not.toBeNull();
+
+            capturedAnimation = null;
+
+            $animate.leave(element, parent);
+            $rootScope.$digest();
+            expect(capturedAnimation).not.toBeNull();
+          });
+        }
+      );
+
+      it('should only perform animations for which the function returns a truthy value (SVG)',
+        function() {
+          var animationsAllowed = false;
+
+          module(function($animateProvider) {
+            $animateProvider.customFilter(function() { return animationsAllowed; });
+          });
+
+          inject(function($animate, $compile, $rootScope) {
+            var svgElement = $compile('<svg class="element"></svg>')($rootScope);
+
+            $animate.enter(svgElement, parent);
+            $rootScope.$digest();
+            expect(capturedAnimation).toBeNull();
+
+            $animate.leave(svgElement, parent);
+            $rootScope.$digest();
+            expect(capturedAnimation).toBeNull();
+
+            animationsAllowed = true;
+
+            $animate.enter(svgElement, parent);
+            $rootScope.$digest();
+            expect(capturedAnimation).not.toBeNull();
+
+            capturedAnimation = null;
+
+            $animate.leave(svgElement, parent);
+            $rootScope.$digest();
+            expect(capturedAnimation).not.toBeNull();
+          });
+        }
+      );
+
+      it('should pass the DOM element, event name and options to the filter function', function() {
+        var filterFn = jasmine.createSpy('filterFn');
+        var options = {};
+
+        module(function($animateProvider) {
+          $animateProvider.customFilter(filterFn);
+        });
+
+        inject(function($animate, $rootScope) {
+          $animate.enter(element, parent, null, options);
+          expect(filterFn).toHaveBeenCalledOnceWith(element[0], 'enter', options);
+
+          filterFn.calls.reset();
+
+          $animate.leave(element);
+          expect(filterFn).toHaveBeenCalledOnceWith(element[0], 'leave', jasmine.any(Object));
+        });
+      });
+
+      it('should complete the DOM operation even if filtered out', function() {
+        module(function($animateProvider) {
+          $animateProvider.customFilter(function() { return false; });
+        });
+
+        inject(function($animate, $rootScope) {
+          expect(element.parent()[0]).toBeUndefined();
+
+          $animate.enter(element, parent);
+          $rootScope.$digest();
+
+          expect(capturedAnimation).toBeNull();
+          expect(element.parent()[0]).toBe(parent[0]);
+
+          $animate.leave(element);
+          $rootScope.$digest();
+
+          expect(capturedAnimation).toBeNull();
+          expect(element.parent()[0]).toBeUndefined();
+        });
+      });
+
+      it('should not execute the function if animations are globally disabled', function() {
+        var customFilterSpy = jasmine.createSpy('customFilterFn');
+
+        module(function($animateProvider) {
+          $animateProvider.customFilter(customFilterSpy);
+        });
+
+        inject(function($animate) {
+          $animate.addClass(element, 'foo');
+          expect(customFilterSpy).toHaveBeenCalled();
+
+          customFilterSpy.calls.reset();
+          $animate.enabled(false);
+          $animate.addClass(element, 'bar');
+          expect(customFilterSpy).not.toHaveBeenCalled();
+
+          customFilterSpy.calls.reset();
+          $animate.enabled(true);
+          $animate.addClass(element, 'baz');
+          expect(customFilterSpy).toHaveBeenCalled();
+        });
+      });
+    });
+
     describe('enabled()', function() {
       it('should work for all animations', inject(function($animate) {
 

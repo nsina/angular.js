@@ -351,6 +351,75 @@ describe('ngMock', function() {
     }));
 
 
+    it('should allow you to NOT specify the delay time', inject(function($interval) {
+      var counterA = 0;
+      var counterB = 0;
+
+      $interval(function() { counterA++; });
+      $interval(function() { counterB++; }, 0);
+
+      $interval.flush(100);
+      expect(counterA).toBe(100);
+      expect(counterB).toBe(100);
+      $interval.flush(100);
+      expect(counterA).toBe(200);
+      expect(counterB).toBe(200);
+    }));
+
+
+    it('should run tasks in correct relative order', inject(function($interval) {
+      var counterA = 0;
+      var counterB = 0;
+      $interval(function() { counterA++; }, 0);
+      $interval(function() { counterB++; }, 1000);
+
+      $interval.flush(1000);
+      expect(counterA).toBe(1000);
+      expect(counterB).toBe(1);
+      $interval.flush(999);
+      expect(counterA).toBe(1999);
+      expect(counterB).toBe(1);
+      $interval.flush(1);
+      expect(counterA).toBe(2000);
+      expect(counterB).toBe(2);
+    }));
+
+
+    it('should NOT trigger zero-delay interval when flush has ran before', inject(function($interval) {
+      var counterA = 0;
+      var counterB = 0;
+
+      $interval.flush(100);
+
+      $interval(function() { counterA++; });
+      $interval(function() { counterB++; }, 0);
+
+      expect(counterA).toBe(0);
+      expect(counterB).toBe(0);
+
+      $interval.flush(100);
+
+      expect(counterA).toBe(100);
+      expect(counterB).toBe(100);
+    }));
+
+
+    it('should trigger zero-delay interval only once on flush zero', inject(function($interval) {
+      var counterA = 0;
+      var counterB = 0;
+
+      $interval(function() { counterA++; });
+      $interval(function() { counterB++; }, 0);
+
+      $interval.flush(0);
+      expect(counterA).toBe(1);
+      expect(counterB).toBe(1);
+      $interval.flush(0);
+      expect(counterA).toBe(1);
+      expect(counterB).toBe(1);
+    }));
+
+
     it('should allow you to specify a number of iterations', inject(function($interval) {
       var counter = 0;
       $interval(function() {counter++;}, 1000, 2);
@@ -1678,7 +1747,8 @@ describe('ngMock', function() {
 
         expect(function() {
           hb.verifyNoOutstandingRequest();
-        }).toThrowError('Unflushed requests: 1');
+        }).toThrowError('Unflushed requests: 1\n' +
+                        '  GET /some');
       });
 
 
@@ -1690,8 +1760,23 @@ describe('ngMock', function() {
 
         expect(function() {
           hb.verifyNoOutstandingRequest();
-        }).toThrowError('Unflushed requests: 1');
+        }).toThrowError('Unflushed requests: 1\n' +
+                        '  GET /some');
       }));
+
+
+      it('should describe multiple unflushed requests', function() {
+        hb.when('GET').respond(200);
+        hb.when('PUT').respond(200);
+        hb('GET', '/some', null, noop, {});
+        hb('PUT', '/elsewhere', null, noop, {});
+
+        expect(function() {
+          hb.verifyNoOutstandingRequest();
+        }).toThrowError('Unflushed requests: 2\n' +
+                        '  GET /some\n' +
+                        '  PUT /elsewhere');
+      });
     });
 
 
@@ -2084,7 +2169,7 @@ describe('ngMock', function() {
     );
 
 
-    if (/chrome/.test(window.navigator.userAgent)) {
+    if (support.classes) {
       it('should support assigning bindings to class-based controller', function() {
         var called = false;
         var data = [
