@@ -3246,6 +3246,20 @@ describe('parser', function() {
             expect(args).toEqual([1]);
           }));
 
+          it('should only be passed the intercepted value when wrapping one-time', inject(function($parse) {
+            var args;
+            function interceptor(v) {
+              args = sliceArgs(arguments);
+              return v;
+            }
+
+            scope.$watch($parse('::a', interceptor));
+
+            scope.a = 1;
+            scope.$digest();
+            expect(args).toEqual([1]);
+          }));
+
           it('should only be passed the intercepted value when double-intercepted',
               inject(function($parse) {
             var args1;
@@ -3322,6 +3336,71 @@ describe('parser', function() {
             called = false;
             scope.$digest();
             expect(called).toBe(true);
+          }));
+
+          it('should always be invoked if flagged as $stateful when wrapping one-time',
+              inject(function($parse) {
+
+            var interceptorCalls = 0;
+            function interceptor() {
+              interceptorCalls++;
+              return 123;
+            }
+            interceptor.$stateful = true;
+
+            scope.$watch($parse('::a', interceptor));
+
+            interceptorCalls = 0;
+            scope.$digest();
+            expect(interceptorCalls).not.toBe(0);
+
+            interceptorCalls = 0;
+            scope.$digest();
+            expect(interceptorCalls).not.toBe(0);
+          }));
+
+          it('should always be invoked if flagged as $stateful when wrapping one-time with inputs',
+              inject(function($parse) {
+
+            $filterProvider.register('identity', valueFn(identity));
+
+            var interceptorCalls = 0;
+            function interceptor() {
+              interceptorCalls++;
+              return 123;
+            }
+            interceptor.$stateful = true;
+
+            scope.$watch($parse('::a | identity', interceptor));
+
+            interceptorCalls = 0;
+            scope.$digest();
+            expect(interceptorCalls).not.toBe(0);
+
+            interceptorCalls = 0;
+            scope.$digest();
+            expect(interceptorCalls).not.toBe(0);
+          }));
+
+          it('should always be invoked if flagged as $stateful when wrapping one-time literal',
+              inject(function($parse) {
+
+            var interceptorCalls = 0;
+            function interceptor() {
+              interceptorCalls++;
+              return 123;
+            }
+            interceptor.$stateful = true;
+
+            scope.$watch($parse('::[a]', interceptor));
+
+            interceptorCalls = 0;
+            scope.$digest();
+            expect(interceptorCalls).not.toBe(0);
+
+            interceptorCalls = 0;
+            scope.$digest();
+            expect(interceptorCalls).not.toBe(0);
           }));
 
           it('should not be invoked unless the input changes', inject(function($parse) {
@@ -3433,6 +3512,80 @@ describe('parser', function() {
             scope.x = 1;
             scope.$digest();
             expect(scope.$$watchersCount).toBe(0);
+          }));
+
+          it('should watch the intercepted value of one-time bindings', inject(function($parse, log) {
+            scope.$watch($parse('::{x:x, y:y}', function(lit) { return lit.x; }), log);
+
+            scope.$apply();
+            expect(log.empty()).toEqual([undefined]);
+
+            scope.$apply('x = 1');
+            expect(log.empty()).toEqual([1]);
+
+            scope.$apply('x = 2; y=1');
+            expect(log.empty()).toEqual([2]);
+
+            scope.$apply('x = 1; y=2');
+            expect(log.empty()).toEqual([]);
+          }));
+
+          it('should watch the intercepted value of one-time bindings in nested interceptors', inject(function($parse, log) {
+            scope.$watch($parse($parse('::{x:x, y:y}', function(lit) { return lit.x; }), identity), log);
+
+            scope.$apply();
+            expect(log.empty()).toEqual([undefined]);
+
+            scope.$apply('x = 1');
+            expect(log.empty()).toEqual([1]);
+
+            scope.$apply('x = 2; y=1');
+            expect(log.empty()).toEqual([2]);
+
+            scope.$apply('x = 1; y=2');
+            expect(log.empty()).toEqual([]);
+          }));
+
+          it('should nest interceptors around eachother, not around the intercepted', inject(function($parse) {
+            function origin() { return 0; }
+
+            var fn = origin;
+            function addOne(n) { return n + 1; }
+
+            fn = $parse(fn, addOne);
+            expect(fn.$$intercepted).toBe(origin);
+            expect(fn()).toBe(1);
+
+            fn = $parse(fn, addOne);
+            expect(fn.$$intercepted).toBe(origin);
+            expect(fn()).toBe(2);
+
+            fn = $parse(fn, addOne);
+            expect(fn.$$intercepted).toBe(origin);
+            expect(fn()).toBe(3);
+          }));
+
+          it('should not propogate $$watchDelegate to the interceptor wrapped expression', inject(function($parse) {
+            function getter(s) {
+              return s.x;
+            }
+            getter.$$watchDelegate = getter;
+
+            function doubler(v) {
+              return 2 * v;
+            }
+
+            var lastValue;
+            function watcher(val) {
+              lastValue = val;
+            }
+            scope.$watch($parse(getter, doubler), watcher);
+
+            scope.$apply('x = 1');
+            expect(lastValue).toBe(2 * 1);
+
+            scope.$apply('x = 123');
+            expect(lastValue).toBe(2 * 123);
           }));
         });
 
@@ -3666,35 +3819,55 @@ describe('parser', function() {
 
         it('should watch ES6 object computed property changes', function() {
           var count = 0;
-          var values = [];
+          var lastValue;
 
           scope.$watch('{[a]: true}', function(val) {
             count++;
-            values.push(val);
-          }, true);
+            lastValue = val;
+          });
 
           scope.$digest();
           expect(count).toBe(1);
-          expect(values[0]).toEqual({'undefined': true});
+          expect(lastValue).toEqual({'undefined': true});
 
           scope.$digest();
           expect(count).toBe(1);
-          expect(values[0]).toEqual({'undefined': true});
+          expect(lastValue).toEqual({'undefined': true});
 
           scope.a = true;
           scope.$digest();
           expect(count).toBe(2);
-          expect(values[1]).toEqual({'true': true});
+          expect(lastValue).toEqual({'true': true});
 
           scope.a = 'abc';
           scope.$digest();
           expect(count).toBe(3);
-          expect(values[2]).toEqual({'abc': true});
+          expect(lastValue).toEqual({'abc': true});
 
           scope.a = undefined;
           scope.$digest();
           expect(count).toBe(4);
-          expect(values[3]).toEqual({'undefined': true});
+          expect(lastValue).toEqual({'undefined': true});
+        });
+
+        it('should not shallow-watch ES6 object computed properties in case of stateful toString', function() {
+          var count = 0;
+          var lastValue;
+
+          scope.$watch('{[a]: true}', function(val) {
+            count++;
+            lastValue = val;
+          });
+
+          scope.a = {toString: function() { return this.b; }};
+          scope.a.b = 1;
+
+          //TODO: would be great if it didn't throw!
+          expect(function() { scope.$apply(); }).toThrowMinErr('$rootScope', 'infdig');
+          expect(lastValue).toEqual({1: true});
+
+          expect(function() { scope.$apply('a.b = 2'); }).toThrowMinErr('$rootScope', 'infdig');
+          expect(lastValue).toEqual({2: true});
         });
       });
 
@@ -3870,6 +4043,11 @@ describe('parser', function() {
           expect($parse('5 != null').constant).toBe(true);
           expect($parse('{standard: 4/3, wide: 16/9}').constant).toBe(true);
           expect($parse('{[standard]: 4/3, wide: 16/9}').constant).toBe(false);
+          expect($parse('{["key"]: 1}').constant).toBe(true);
+          expect($parse('[0].length').constant).toBe(true);
+          expect($parse('[0][0]').constant).toBe(true);
+          expect($parse('{x: 1}.x').constant).toBe(true);
+          expect($parse('{x: 1}["x"]').constant).toBe(true);
         }));
 
         it('should not mark any expression involving variables or function calls as constant', inject(function($parse) {
